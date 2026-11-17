@@ -1,0 +1,17 @@
+# Compiled binaries
+hhl_project
+hhl_project.exe
+hhl_verifier
+hhl_verifier.exe
+*.o
+*.obj
+
+# Python
+__pycache__/
+*.py[cod]
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

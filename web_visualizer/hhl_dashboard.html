@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HHL Quantum Algorithm Simulator Dashboard</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --panel: #131a2a;
+      --border: #23304d;
+      --accent: #38bdf8;
+      --accent2: #818cf8;
+      --success: #34d399;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); padding: 24px; }
+    header { max-width: 1100px; margin: 0 auto 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+    h1 { margin: 0 0 6px; font-size: 1.8rem; background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    p.sub { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    .grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    h2 { margin-top: 0; font-size: 1.1rem; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .matrix-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+    input { width: 100%; padding: 8px; background: #0b0f19; border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-size: 0.95rem; }
+    button { width: 100%; padding: 12px; background: linear-gradient(90deg, var(--accent), var(--accent2)); border: none; border-radius: 8px; color: #0b0f19; font-weight: 700; cursor: pointer; font-size: 1rem; margin-top: 8px; }
+    button:hover { opacity: 0.92; }
+    .pipeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+    .step { background: #0b0f19; border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; transition: 0.3s; }
+    .step.active { border-color: var(--success); box-shadow: 0 0 12px rgba(52, 211, 153, 0.25); }
+    .step-num { font-size: 0.75rem; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+    .step-title { font-size: 0.9rem; font-weight: 600; margin-top: 4px; }
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+    .metric-box { background: #0b0f19; border: 1px solid var(--border); padding: 12px; border-radius: 8px; }
+    .metric-label { font-size: 0.78rem; color: var(--muted); }
+    .metric-val { font-size: 1.2rem; font-weight: 700; color: var(--success); margin-top: 4px; }
+    pre { background: #070a12; border: 1px solid var(--border); padding: 14px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; color: #cbd5e1; line-height: 1.5; }
+    @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } .pipeline { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>HHL Quantum Linear Systems Simulator (Ax = b)</h1>
+    <p class="sub">Interactive Quantum Phase Estimation &amp; Conditional Rotation Visualizer</p>
+  </header>
+  <div class="grid">
+    <div class="card">
+      <h2>1. Hermitian Matrix A &amp; Vector b</h2>
+      <div class="matrix-inputs">
+        <div><label>A[0][0]</label><input type="number" id="a00" value="1.5" step="0.1" /></div>
+        <div><label>A[0][1]</label><input type="number" id="a01" value="0.5" step="0.1" /></div>
+        <div><label>A[1][0]</label><input type="number" id="a10" value="0.5" step="0.1" /></div>
+        <div><label>A[1][1]</label><input type="number" id="a11" value="1.5" step="0.1" /></div>
+      </div>
+      <div class="matrix-inputs">
+        <div><label>b[0]</label><input type="number" id="b0" value="1.0" step="0.1" /></div>
+        <div><label>b[1]</label><input type="number" id="b1" value="0.0" step="0.1" /></div>
+      </div>
+      <button onclick="runHHL()">Run HHL Quantum Pipeline</button>
+    </div>
+
+    <div class="card">
+      <h2>2. HHL Execution Pipeline</h2>
+      <div class="pipeline">
+        <div class="step active" id="st1"><div class="step-num">Stage 1</div><div class="step-title">State Prep |b⟩</div></div>
+        <div class="step active" id="st2"><div class="step-num">Stage 2</div><div class="step-title">QPE (λ₁, λ₂)</div></div>
+        <div class="step active" id="st3"><div class="step-num">Stage 3</div><div class="step-title">Rotation R(1/λ)</div></div>
+        <div class="step active" id="st4"><div class="step-num">Stage 4</div><div class="step-title">Uncompute |x⟩</div></div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric-box"><div class="metric-label">Eigenvalues (λ₁, λ₂)</div><div class="metric-val" id="eigVal">2.00, 1.00</div></div>
+        <div class="metric-box"><div class="metric-label">Condition Number (κ)</div><div class="metric-val" id="kappaVal">2.00</div></div>
+        <div class="metric-box"><div class="metric-label">Quantum State |x⟩</div><div class="metric-val" id="solVal">[0.949, -0.316]</div></div>
+      </div>
+
+      <h2>3. Quantum Simulator Log Output</h2>
+      <pre id="consoleLog">Click "Run HHL Quantum Pipeline" to execute simulation...</pre>
+    </div>
+  </div>
+
+  <script>
+    function runHHL() {
+      const a00 = parseFloat(document.getElementById('a00').value);
+      const a01 = parseFloat(document.getElementById('a01').value);
+      const a10 = parseFloat(document.getElementById('a10').value);
+      const a11 = parseFloat(document.getElementById('a11').value);
+      const b0 = parseFloat(document.getElementById('b0').value);
+      const b1 = parseFloat(document.getElementById('b1').value);
+
+      const trace = a00 + a11;
+      const det = a00 * a11 - a01 * a10;
+      const disc = Math.sqrt(Math.max(0, (trace * trace) / 4 - det));
+      const l1 = trace / 2 + disc;
+      const l2 = trace / 2 - disc;
+      const kappa = Math.abs(l1 / (l2 || 1e-6));
+
+      const normB = Math.hypot(b0, b1) || 1;
+      const nb0 = b0 / normB, nb1 = b1 / normB;
+
+      const x0 = (a11 * b0 - a01 * b1) / det;
+      const x1 = (-a10 * b0 + a00 * b1) / det;
+      const normX = Math.hypot(x0, x1) || 1;
+      const nx0 = x0 / normX, nx1 = x1 / normX;
+
+      document.getElementById('eigVal').textContent = `${l1.toFixed(2)}, ${l2.toFixed(2)}`;
+      document.getElementById('kappaVal').textContent = kappa.toFixed(2);
+      document.getElementById('solVal').textContent = `[${nx0.toFixed(3)}, ${nx1.toFixed(3)}]`;
+
+      document.getElementById('consoleLog').textContent =
+`[Step 1] State Preparation: Normalized |b> = [${nb0.toFixed(4)}, ${nb1.toFixed(4)}]
+[Step 2] Quantum Phase Estimation (QPE): Extracted eigenvalues lambda_1 = ${l1.toFixed(4)}, lambda_2 = ${l2.toFixed(4)}
+[Step 3] Conditional Rotation R(1/lambda): Ancilla scaled by 1/lambda_1 = ${(1/l1).toFixed(4)}, 1/lambda_2 = ${(1/l2).toFixed(4)}
+[Step 4] Uncomputation & Measurement: Ancilla |1> observed!
+         Prepared Quantum Solution State |x> = [${nx0.toFixed(4)}, ${nx1.toFixed(4)}]`;
+    }
+    runHHL();
+  </script>
+</body>
+</html>
